@@ -13,123 +13,99 @@ well. _Notice, however, that we do not plan to support previous Airflow versions
 
 ## Using the Airflow Image
 
-### Linux / macOS
+### Prerequisites
 
-To experiment with the image using a vanilla Docker setup, follow these steps:
-
-0. _(Prerequisites)_ Ensure you have:
-   - Python 3.11 or later.
-   - [Docker](https://docs.docker.com/desktop/) and [Docker Compose](https://docs.docker.com/compose/install/)
-1. Clone this repository.
-2. This repository makes use of Python virtual environments. To create them, from the root of the
-   package, execute the following command:
-
-```
-# Create venvs for all Airflow versions
-python3 create_venvs.py --target <development | production>
-
-# Or create venv for a specific version only
-python3 create_venvs.py --target <development | production> --version 3.0.6
-```
-
-3. Build a supported Airflow version Docker image
-   - `cd <amazon-mwaa-docker-images path>/images/airflow/2.9.2`
-   - Update `run.sh` file with your account ID, environment name and account credentials, api-server URL 
-   - (`http://host_name:8080`). The permissions associated
-   with the provided credentials will be assigned to the Airflow components that would be started with the next step. 
-   So, if you receive any error message indicating lack of permissions, then try providing the permissions to the 
-   identity whose credentials were used.
-   - `./run.sh` This will build and run all the necessary containers and automatically create the following CloudWatch log groups:
-     - `{ENV_NAME}-DAGProcessing`
-     - `{ENV_NAME}-Scheduler`
-     - `{ENV_NAME}-Worker`
-     - `{ENV_NAME}-Task`
-     - `{ENV_NAME}-WebServer`
-
-Airflow should be up and running now. You can access the web server on your localhost on port 8080.
-
----
-
-### Windows (PowerShell 5.1) [Not supported by AWS MWAA Service Team]
-
-#### Prerequisites
-
-- Windows 10/11 with PowerShell 5.1 (built-in — no installation needed)
 - Python 3.11 or later — install from [python.org](https://www.python.org/downloads/) (check "Add Python to PATH" during install)
 - [Docker Desktop for Windows](https://docs.docker.com/desktop/install/windows-install/) set to **Linux containers** mode
   - Right-click the Docker Desktop tray icon → "Switch to Linux containers" if needed
+- [Git for Windows](https://git-scm.com/download/win) (Git Bash) — used to run all shell commands
 - AWS CLI (optional — only required if you want CloudWatch log group creation)
 
-#### One-time setup
+### One-time setup
 
 1. Clone this repository.
 
-2. Allow PowerShell to run local scripts (run once as your user):
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+2. Open **Git Bash** and create the Python virtual environments from the repo root:
 
-3. Create the Python virtual environments from the repo root:
-```powershell
-# Create venvs for all Airflow versions
+```bash
+# Create venv for a specific Airflow version only (recommended)
+python create_venvs.py --target development --version 2.10.3
+
+# Or create venvs for all Airflow versions
 python create_venvs.py --target development
-
-# Or for a specific version only
-python create_venvs.py --target development --version <version>
 ```
 
-#### Running
+### Running
 
-4. Navigate to an Airflow version directory and run:
-```powershell
-cd images\airflow\<version>
-.\run.ps1
+3. Navigate to an Airflow version directory and run the stack:
+
+```bash
+cd images/airflow/<version>
+./run.sh
 ```
 
 This will build the Docker images and start the full Airflow stack. On first run, the image build can take 10–20 minutes.
 
 - To test a `requirements.txt` without running Airflow:
-```powershell
-.\run.ps1 -Command test-requirements
+```bash
+./run.sh test-requirements
 ```
 - To test a `startup.sh` without running Airflow:
-```powershell
-.\run.ps1 -Command test-startup-script
+```bash
+./run.sh test-startup-script
 ```
 
-#### AWS Credentials
+### AWS Credentials
 
-For local development without a real AWS account, `run.ps1` defaults to dummy values — ElasticMQ (the local SQS mock) does not validate credentials. To use real AWS services (e.g. CloudWatch logging), update the `$AccountId`, `$EnvName`, and `$env:AWS_*` values at the top of `run.ps1`.
+For local development without a real AWS account, `run.sh` defaults to dummy values — ElasticMQ (the local SQS mock) does not validate credentials. To use real AWS services (e.g. CloudWatch logging), update `ACCOUNT_ID`, `ENV_NAME`, and the `AWS_*` variables at the top of `run.sh`.
 
-#### Logging in
+### Logging in
 
 Once the stack is up, open `http://localhost:8080`. The default credentials are printed in the webserver container logs on startup.
 
-#### Adding DAGs
+### Adding DAGs
 
-Drop DAG files into `images\airflow\<version>\dags\`. They are live-mounted into the container — no restart needed. The scheduler picks them up within a minute or two.
+DAGs are synced from the `data-pipelines` repository using `sync-dags.sh`, which mirrors the same directory layout used when deploying to S3 (matching production MWAA).
 
-#### Stopping
+In a separate terminal, run from the repo root:
 
-```powershell
+```bash
+# One-time sync
+./sync-dags.sh
+
+# Watch mode — re-syncs automatically when files change (recommended during development)
+./sync-dags.sh --watch
+
+# Custom paths
+./sync-dags.sh /path/to/data-pipelines 2.10.3 --watch
+```
+
+The default poll interval is 5 seconds. DAGs are picked up by Airflow within ~30 seconds of a sync.
+
+### Stopping
+
+Press `Ctrl+C` in the terminal where `./run.sh` is running — this gracefully stops all containers.
+
+If you ran the stack detached (`-d`), stop it with:
+
+```bash
 docker compose down
 ```
 
-#### Troubleshooting
+### Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| `cannot be loaded because running scripts is disabled` | Run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` |
 | `Docker is not in Linux containers mode` | Right-click Docker Desktop tray icon → Switch to Linux containers |
 | `python` not found | Install Python 3.11+ from python.org with "Add to PATH" checked |
-| `Unable to locate credentials` | Ensure `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are non-empty in `run.ps1` |
+| `Unable to locate credentials` | Ensure `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are non-empty in `run.sh` |
 | Login fails at `http://localhost:8080` | Check the webserver container logs for the credentials printed on startup |
-| DAG not appearing | Check the scheduler container logs or verify the file exists in the `dags\` folder |
+| DAG not appearing | Check the scheduler container logs or verify the file exists in the `dags/` folder |
 
 ### Authentication from version 3.0.1 onward
-For environments created using this repository starting with version 3.0.1, we default to using `SimpleAuthManager`, 
-which is also the default auth manager in Airflow 3.0.0+. By default, `SIMPLE_AUTH_MANAGER_ALL_ADMINS` is set to true, 
-which means no username/password is required, and all users will have admin access. You can specify users and roles 
+For environments created using this repository starting with version 3.0.1, we default to using `SimpleAuthManager`,
+which is also the default auth manager in Airflow 3.0.0+. By default, `SIMPLE_AUTH_MANAGER_ALL_ADMINS` is set to true,
+which means no username/password is required, and all users will have admin access. You can specify users and roles
 using the SIMPLE_AUTH_MANAGER_USERS environment variable in the format:
 ```
 username:role[,username2:role2,...]
@@ -139,7 +115,7 @@ To enforce authentication with explicit user passwords and roles, set:
 ```
 SIMPLE_AUTH_MANAGER_ALL_ADMINS=false
 ```
-In this mode, a password will be automatically generated for each user and printed in the webserver logs as soon as 
+In this mode, a password will be automatically generated for each user and printed in the webserver logs as soon as
 webserver starts.
 
 
@@ -182,7 +158,7 @@ Each of the postfixes added to the image tag represents a certain build type, as
 
 #### Requirements
 
-For details on installing Python depedencies, and optionally bundling wheel files, see the [Managing Python dependencies in requirements.txt](https://docs.aws.amazon.com/mwaa/latest/userguide/best-practices-dependencies.html#best-practices-dependencies-different-ways) in the Amazon MWAA user guide.  
+For details on installing Python depedencies, and optionally bundling wheel files, see the [Managing Python dependencies in requirements.txt](https://docs.aws.amazon.com/mwaa/latest/userguide/best-practices-dependencies.html#best-practices-dependencies-different-ways) in the Amazon MWAA user guide.
 
 - Add Python dependencies to `requirements/requirements.txt`
 - To test a `requirements.txt` without running Apache Airflow, run:

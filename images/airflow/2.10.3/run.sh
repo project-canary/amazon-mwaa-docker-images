@@ -18,13 +18,13 @@ generate_fernet_key() {
     # Install cryptography package quietly
     chmod +x temporary-pip-install generate_fernet_key.py
     ./temporary-pip-install cryptography >/dev/null 2>&1
-    
+
     # Generate the key and format as JSON
-    KEY=$(python3 generate_fernet_key.py)
-    
+    KEY=$(python generate_fernet_key.py)
+
     # Uninstall cryptography package quietly
-    python3 -m pip uninstall -y cryptography cryptography-vectors &>/dev/null 2>&1
-    
+    python -m pip uninstall -y cryptography cryptography-vectors &>/dev/null 2>&1
+
     echo "$KEY"
 }
 
@@ -55,9 +55,12 @@ REGION="us-west-2" # Keeping the region us-west-2 as default.
 # ElasticMQ (local SQS) does not validate credentials, but boto3 requires
 # non-empty values to sign requests. Replace with real credentials if you
 # want CloudWatch logging or other real AWS service access.
-AWS_ACCESS_KEY_ID="local" # Put your credentials here, or leave as "local" for offline use.
-AWS_SECRET_ACCESS_KEY="local" # Put your credentials here, or leave as "local" for offline use.
-AWS_SESSION_TOKEN="" # Put your credentials here (leave empty for offline use).
+# Use existing credentials from the environment if set (e.g. from aws-vault, saml2aws, or shell profile).
+# Fall back to "local" dummy values for offline use — ElasticMQ does not validate credentials,
+# but S3 access (e.g. sync-plugins) requires real credentials.
+AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-local}"
+AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-local}"
+AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN:-}"
 export AWS_ACCESS_KEY_ID
 export AWS_SECRET_ACCESS_KEY
 export AWS_SESSION_TOKEN
