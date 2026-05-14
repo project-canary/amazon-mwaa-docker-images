@@ -32,7 +32,7 @@ USER airflow
 
 ENTRYPOINT ["python3", "-m", "mwaa.entrypoint"]
 
-CMD shell
+CMD ["shell"]
 {% elif build_type == 'explorer' %}
 {#
 The 'explorer' build type is almost identical to the 'standard' build type but
