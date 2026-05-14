@@ -22,14 +22,47 @@ for arg in "$@"; do
 done
 
 # Positional defaults (mirrors sync_dags.py defaults)
-DATA_PIPELINES_DIR="${SYNC_ARGS[0]:-/c/Development/data-pipelines}"
 AIRFLOW_VERSION="${SYNC_ARGS[1]:-2.10.3}"
+DATA_PIPELINES_DIR="${SYNC_ARGS[0]:-/c/Development/data-pipelines}"
+
+ENV_FILE="images/airflow/$AIRFLOW_VERSION/.env"
+PLUGINS_DIR="images/airflow/$AIRFLOW_VERSION/plugins"
+PLUGINS_S3_DIR="s3://canary-etl-jobs/airflow/nonprod_2103/dependencies/"
+MWAA_SECRETS_DIR="${MWAA_SECRETS_DIR:-/tmp/mwaa-local}"
+
+# Fetch connections from Secrets Manager using local AWS credentials and write to
+# a temp directory outside the repo, which is mounted read-only into the container.
+# The secrets file is never written to the repo directory.
+if [ -f "$ENV_FILE" ]; then
+    set -o allexport
+    source "$ENV_FILE"
+    set +o allexport
+fi
+
+mkdir -p "$MWAA_SECRETS_DIR"
+export MWAA_SECRETS_DIR
+
+if [ -n "$CONNECTIONS_SECRET_ID" ]; then
+    echo "==> Fetching connections from Secrets Manager (${CONNECTIONS_SECRET_ID})..."
+    aws secretsmanager get-secret-value \
+        --secret-id "$CONNECTIONS_SECRET_ID" \
+        --region "${AWS_REGION:-us-east-2}" \
+        --query SecretString \
+        --output text > "$MWAA_SECRETS_DIR/connections.json"
+    if [ $? -eq 0 ]; then
+        echo "==> Connections written to ${MWAA_SECRETS_DIR}/connections.json"
+    else
+        echo "WARNING: Failed to fetch connections secret — connections will not be imported" >&2
+        rm -f "$MWAA_SECRETS_DIR/connections.json"
+    fi
+else
+    echo "==> CONNECTIONS_SECRET_ID not set — skipping connection fetch"
+fi
 
 # Sync plugins_whl.zip from S3 and extract wheels for pip --find-links
 echo "==> Syncing plugins_whl.zip from S3..."
-PLUGINS_DIR="images/airflow/$AIRFLOW_VERSION/plugins"
 mkdir -p "$PLUGINS_DIR"
-aws s3 sync s3://canary-etl-jobs/airflow/nonprod_2103/dependencies/ "$PLUGINS_DIR/" --exclude '*' --include 'plugins_whl.zip'
+aws s3 sync "$PLUGINS_S3_DIR" "$PLUGINS_DIR/" --exclude '*' --include 'plugins_whl.zip'
 echo "==> Extracting wheels..."
 unzip -o "$PLUGINS_DIR/plugins_whl.zip" -d "$PLUGINS_DIR/" > /dev/null
 

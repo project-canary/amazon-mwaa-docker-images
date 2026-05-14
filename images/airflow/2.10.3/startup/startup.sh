@@ -1,41 +1,29 @@
 #!/bin/bash
-# Import Airflow connections from a Secrets Manager secret.
-#
-# The secret should be a JSON object in Airflow's connections import format:
-#   {
-#     "<conn_id>": {
-#       "conn_type": "postgres",
-#       "host": "...",
-#       "login": "...",
-#       "password": "...",
-#       "port": 5432,
-#       "schema": "..."
-#     },
-#     ...
-#   }
-#
-# Set CONNECTIONS_SECRET_ID in your .env to enable this.
+# Bootstrap local MWAA on startup:
+#   1. Import Airflow connections from /run/secrets/connections.json (written by
+#      start-local.sh on the host using local AWS credentials, mounted read-only
+#      from a temp directory outside the repo).
+#   2. Import Airflow pools from /usr/local/airflow/startup/pools.json (checked
+#      into the repo alongside this script).
 
-if [ -z "${CONNECTIONS_SECRET_ID}" ]; then
-  echo "CONNECTIONS_SECRET_ID not set — skipping connection import"
-  exit 0
+# --- Connections ---
+CONNECTIONS_FILE="/run/secrets/connections.json"
+
+if [ ! -f "$CONNECTIONS_FILE" ]; then
+    echo "No connections.json found at ${CONNECTIONS_FILE} — skipping connection import"
+else
+    echo "Importing connections from ${CONNECTIONS_FILE}..."
+    airflow connections import --overwrite "$CONNECTIONS_FILE"
+    echo "Connections imported successfully"
 fi
 
-echo "Importing connections from Secrets Manager: ${CONNECTIONS_SECRET_ID}"
+# --- Pools ---
+POOLS_FILE="/usr/local/airflow/startup/pools.json"
 
-aws secretsmanager get-secret-value \
-  --secret-id "${CONNECTIONS_SECRET_ID}" \
-  --region "${AWS_REGION:-us-east-2}" \
-  --query SecretString \
-  --output text > /tmp/connections.json
-
-if [ $? -ne 0 ]; then
-  echo "ERROR: Failed to fetch connections secret '${CONNECTIONS_SECRET_ID}'" >&2
-  rm -f /tmp/connections.json
-  exit 1
+if [ ! -f "$POOLS_FILE" ]; then
+    echo "No pools.json found at ${POOLS_FILE} — skipping pool import"
+else
+    echo "Importing pools from ${POOLS_FILE}..."
+    airflow pools import "$POOLS_FILE"
+    echo "Pools imported successfully"
 fi
-
-airflow connections import /tmp/connections.json
-rm -f /tmp/connections.json
-
-echo "Connections imported successfully"
