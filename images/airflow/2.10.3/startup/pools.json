@@ -1,0 +1,212 @@
+{
+  "aeroqual_api_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "metec_measurements_api_pool": {
+    "description": "",
+    "slots": 5,
+    "include_deferred": false
+  },
+  "red_willow_arcgis_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sense_ee_backfill_processing_pool": {
+    "description": "",
+    "slots": 4,
+    "include_deferred": false
+  },
+  "sensirion_laser_api_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sensirion_eqt_alarm": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sensirion_eqt_laser_api": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sensirion_mox_api_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "reg7_report_generation_pool": {
+    "description": "",
+    "slots": 4,
+    "include_deferred": false
+  },
+  "sharepoint_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "data_hub_calculator_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sensirion_api": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "mapbox_pool": {
+    "description": "Serial uploads for Mapbox tilesets",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "data_hub_api_pool": {
+    "description": "",
+    "slots": 3,
+    "include_deferred": false
+  },
+  "postgres_replication_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "reg7_backfill_check_pool": {
+    "description": "",
+    "slots": 3,
+    "include_deferred": false
+  },
+  "well_database_api_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sensirion_equitrans_alarm": {
+    "description": "Sensirion Equitrans alarm processing",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sensirion_equitrans_laser_api": {
+    "description": "equitrans pool ",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sense_api_im_emission_events": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "planet_data_api_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sense_periodic_dev": {
+    "description": "",
+    "slots": 3,
+    "include_deferred": false
+  },
+  "sense_periodic_staging": {
+    "description": "",
+    "slots": 3,
+    "include_deferred": false
+  },
+  "sensit_migration_pool_dev": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sensit_migration_pool_staging": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sensit_migration_pool_prod": {
+    "description": "",
+    "slots": 3,
+    "include_deferred": false
+  },
+  "redshift_dev": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "redshift_staging": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "aeroqual_migration_pool_dev": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "aeroqual_migration_pool_staging": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "kuva_api_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "aeroqual_cloud_api": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "default_pool": {
+    "description": "default",
+    "slots": 128,
+    "include_deferred": false
+  },
+  "sensit_api_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sense_ee_backfill_check_pool": {
+    "description": "",
+    "slots": 3,
+    "include_deferred": false
+  },
+  "qube_api_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sensirion_event_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "carbon_mapper_api_pool": {
+    "description": "",
+    "slots": 4,
+    "include_deferred": false
+  },
+  "sense_aggregate_refresh_dev_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sense_aggregate_refresh_staging_pool": {
+    "description": "",
+    "slots": 1,
+    "include_deferred": false
+  },
+  "sense_aggregate_refresh_prod_pool": {
+    "description": "Pool with zero slots to enable proper DAG processing but no targeting of Prod",
+    "slots": 0,
+    "include_deferred": false
+  },
+  "sensit_backfill_trigger_pool": {
+    "description": "",
+    "slots": 2,
+    "include_deferred": true
+  }
+}
