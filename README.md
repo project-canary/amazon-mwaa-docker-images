@@ -25,10 +25,10 @@ well. _Notice, however, that we do not plan to support previous Airflow versions
 
 1. Clone this repository.
 
-2. Disable `autocrlf` for this repo (the `.gitattributes` handles line endings — `autocrlf` conflicts with it and causes spurious Dockerfile diffs):
+2. Disable `autocrlf` globally — the `.gitattributes` handles line endings and `autocrlf` conflicts with it, causing spurious Dockerfile diffs. The Git for Windows installer sets this to `true` at the system level; override it at the global level so editors (e.g. VS Code) also respect it:
 
 ```bash
-git config core.autocrlf false
+git config --global core.autocrlf false
 ```
 
 3. Open **Git Bash** and create the Python virtual environments from the repo root:
@@ -107,7 +107,7 @@ docker compose down
 | `Unable to locate credentials` | Ensure `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are non-empty in `run.sh` |
 | Login fails at `http://localhost:8080` | Check the webserver container logs for the credentials printed on startup |
 | DAG not appearing | Check the scheduler container logs or verify the file exists in the `dags/` folder |
-| Dockerfiles (or other files) show spurious line-ending diffs | Run `git config core.autocrlf false` then `git checkout -- .` to restore files |
+| Dockerfiles (or other files) show spurious line-ending diffs | Run `git config --global core.autocrlf false` then `git checkout -- .` to restore files |
 
 ### Authentication from version 3.0.1 onward
 For environments created using this repository starting with version 3.0.1, we default to using `SimpleAuthManager`,
