@@ -27,5 +27,6 @@
     "**/venv": true
   },
   "python.defaultInterpreterPath": "./.venv/bin/python",
-  "files.trimFinalNewlines": false
+  "files.trimFinalNewlines": false,
+  "files.insertFinalNewline": true
 }
