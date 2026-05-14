@@ -8,9 +8,12 @@ x-airflow-common: &airflow-common
     PROJECTCANARY_ENVIRONMENT: "nonprod"
 
     # AWS credentials
-    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-    AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+    # Credentials come from the ~/.aws profile chain (mounted below) so that
+    # the credential tool on the host can refresh them without restarting the
+    # stack.  Set AWS_PROFILE on the host to select the right named profile.
+    # Static session-token env vars are intentionally omitted — they expire
+    # and override the profile chain, causing sts:AssumeRole failures.
+    AWS_PROFILE: ${AWS_PROFILE:-default}
     AWS_REGION: "us-east-2"
     AWS_DEFAULT_REGION: "us-east-2"
 
@@ -71,6 +74,7 @@ x-airflow-common: &airflow-common
     - ./requirements:/usr/local/airflow/requirements
     - ./startup:/usr/local/airflow/startup
     - ${MWAA_SECRETS_DIR:-/tmp/mwaa-local}:/run/secrets:ro
+    - ${HOME}/.aws:/usr/local/airflow/.aws:ro
 
   depends_on: &airflow-common-depends-on
     postgres:

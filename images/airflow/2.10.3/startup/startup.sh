@@ -3,7 +3,10 @@
 #   1. Import Airflow connections from /run/secrets/connections.json (written by
 #      start-local.sh on the host using local AWS credentials, mounted read-only
 #      from a temp directory outside the repo).
-#   2. Import Airflow pools from /usr/local/airflow/startup/pools.json (checked
+#   2. Strip role_arn from all AWS connections — locally the developer's SSO
+#      identity has sufficient direct access; role assumption is for the MWAA
+#      execution role in production and is not available to SSO principals.
+#   3. Import Airflow pools from /usr/local/airflow/startup/pools.json (checked
 #      into the repo alongside this script).
 
 # --- Connections ---
@@ -16,6 +19,32 @@ else
     airflow connections import --overwrite "$CONNECTIONS_FILE"
     echo "Connections imported successfully"
 fi
+
+# --- Strip role_arn from AWS connections ---
+# In production, MWAA tasks assume IAM roles via the MWAA execution role.
+# Locally, the developer's SSO identity cannot assume those roles (trust policy
+# only allows the MWAA execution role).  Strip role_arn so boto uses the
+# developer's direct credentials from ~/.aws instead.
+echo "Stripping role_arn from AWS connections for local dev..."
+python3 - <<'EOF'
+import json
+from airflow.utils.session import create_session
+from airflow.models import Connection
+
+with create_session() as session:
+    conns = session.query(Connection).filter(Connection.conn_type == "aws").all()
+    for conn in conns:
+        try:
+            extra = json.loads(conn.extra) if conn.extra else {}
+            if "role_arn" in extra:
+                del extra["role_arn"]
+                conn.extra = json.dumps(extra)
+                print(f"  Patched: {conn.conn_id}")
+        except (json.JSONDecodeError, TypeError):
+            pass
+    session.commit()
+EOF
+echo "Done"
 
 # --- Pools ---
 POOLS_FILE="/usr/local/airflow/startup/pools.json"

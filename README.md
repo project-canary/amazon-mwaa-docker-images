@@ -63,30 +63,46 @@ This will build the Docker images and start the full Airflow stack. On first run
 
 ### AWS Credentials
 
-For local development without a real AWS account, `run.sh` defaults to dummy values — ElasticMQ (the local SQS mock) does not validate credentials. To use real AWS services (e.g. CloudWatch logging), update `ACCOUNT_ID`, `ENV_NAME`, and the `AWS_*` variables at the top of `run.sh`.
+Credentials are read from `~/.aws` using the AWS profile named by `AWS_PROFILE` (defaults to `default`). The `~/.aws` directory is mounted read-only into each container, so credentials refreshed by your credential tool (e.g. `saml2aws`, `aws sso login`) are picked up automatically without restarting the stack.
+
+To use a named profile instead of `default`, set `AWS_PROFILE` before running:
+
+```bash
+export AWS_PROFILE=your-profile-name
+./start-local.sh
+```
 
 ### Logging in
 
 Once the stack is up, open `http://localhost:8080`. The default credentials are printed in the webserver container logs on startup.
 
-### Adding DAGs
+### Local development with `start-local.sh`
 
-DAGs are synced from the `data-pipelines` repository using `sync-dags.sh`, which mirrors the same directory layout used when deploying to S3 (matching production MWAA).
+`start-local.sh` is the recommended entry point for local development. It handles everything in one step:
 
-In a separate terminal, run from the repo root:
+1. Fetches Airflow connections from AWS Secrets Manager and writes them to a temp directory mounted into the containers (requires `CONNECTIONS_SECRET_ID` in `images/airflow/<version>/.env`)
+2. Syncs plugins from S3
+3. Syncs DAGs from your local `data-pipelines` checkout into a named Docker volume (so the scheduler reads from native ext4 rather than the Windows filesystem)
+4. Starts the full Airflow stack
 
 ```bash
-# One-time sync
-./sync-dags.sh
+# From the repo root — uses defaults (data-pipelines at /c/Development/data-pipelines, Airflow 2.10.3)
+./start-local.sh
 
-# Watch mode — re-syncs automatically when files change (recommended during development)
-./sync-dags.sh --watch
+# Watch mode — re-syncs DAGs automatically when files change (recommended)
+./start-local.sh --watch
 
 # Custom paths
-./sync-dags.sh /path/to/data-pipelines 2.10.3 --watch
+./start-local.sh /path/to/data-pipelines 2.10.3 --watch
 ```
 
-The default poll interval is 5 seconds. DAGs are picked up by Airflow within ~30 seconds of a sync.
+**`.env` file** — create `images/airflow/<version>/.env` to configure the connections secret:
+
+```bash
+CONNECTIONS_SECRET_ID=your-secret-name
+```
+
+On startup, `startup.sh` imports connections and pools, and strips `role_arn` from all AWS connections so your local SSO credentials are used directly (MWAA's execution role assumption is not available to SSO principals locally).
 
 ### Stopping
 
@@ -104,7 +120,7 @@ docker compose down
 |---|---|
 | `Docker is not in Linux containers mode` | Right-click Docker Desktop tray icon → Switch to Linux containers |
 | `python` not found | Install Python 3.11+ from python.org with "Add to PATH" checked |
-| `Unable to locate credentials` | Ensure `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are non-empty in `run.sh` |
+| `Unable to locate credentials` | Ensure `~/.aws/credentials` exists with a `[default]` profile, or set `AWS_PROFILE` to a valid named profile |
 | Login fails at `http://localhost:8080` | Check the webserver container logs for the credentials printed on startup |
 | DAG not appearing | Check the scheduler container logs or verify the file exists in the `dags/` folder |
 | Dockerfiles (or other files) show spurious line-ending diffs | Run `git config --global core.autocrlf false` then `git checkout -- .` to restore files |

@@ -51,19 +51,17 @@ ENV_NAME="" # Choose an environment name here.
 REGION="us-west-2" # Keeping the region us-west-2 as default.
 
 # AWS Credentials
-# For local running without a real AWS account, dummy values are sufficient —
-# ElasticMQ (local SQS) does not validate credentials, but boto3 requires
-# non-empty values to sign requests. Replace with real credentials if you
-# want CloudWatch logging or other real AWS service access.
-# Use existing credentials from the environment if set (e.g. from aws-vault, saml2aws, or shell profile).
-# Fall back to "local" dummy values for offline use — ElasticMQ does not validate credentials,
-# but S3 access (e.g. sync-plugins) requires real credentials.
-AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-local}"
-AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-local}"
-AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN:-}"
-export AWS_ACCESS_KEY_ID
-export AWS_SECRET_ACCESS_KEY
-export AWS_SESSION_TOKEN
+# Credentials are sourced from ~/.aws (mounted into containers) using the
+# profile named by AWS_PROFILE.  This lets the host credential tool refresh
+# credentials without restarting the stack.
+#
+# Defaults to "default" so no setup is required. Override by setting AWS_PROFILE
+# in the environment before running if you use a named profile.
+#
+# Static session-token env vars (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
+# AWS_SESSION_TOKEN) are intentionally NOT exported here — they expire and
+# override the profile chain, which causes sts:AssumeRole failures inside tasks.
+export AWS_PROFILE="${AWS_PROFILE:-default}"
 
 # BOM Generation
 GENERATE_BILL_OF_MATERIALS="False"
