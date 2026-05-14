@@ -23,7 +23,7 @@ x-airflow-common: &airflow-common
     # Use this environment variable if you have a custom start-up script.
     MWAA__CORE__STARTUP_SCRIPT_PATH: ${MWAA__CORE__STARTUP_SCRIPT_PATH:-/usr/local/airflow/startup/startup.sh}
     # Additional Airflow configuration can be passed here in JSON form.
-    MWAA__CORE__CUSTOM_AIRFLOW_CONFIGS: '{"AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL": "120", "AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL": "120", "AIRFLOW__SCHEDULER__PARSING_PROCESSES": "4", "AIRFLOW__WEBSERVER__EXPOSE_CONFIG": "True", "AIRFLOW__WEBSERVER__SHOW_TRIGGER_FORM_IF_NO_PARAMS": "True", "AIRFLOW__CORE__MAX_MAP_LENGTH": "500"}'
+    MWAA__CORE__CUSTOM_AIRFLOW_CONFIGS: '{"AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL": "120", "AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL": "120", "AIRFLOW__SCHEDULER__PARSING_PROCESSES": "4", "AIRFLOW__SCHEDULER__DAG_FILE_PROCESSOR_TIMEOUT": "300", "AIRFLOW__CORE__DAGBAG_IMPORT_TIMEOUT": "300", "AIRFLOW__WEBSERVER__EXPOSE_CONFIG": "True", "AIRFLOW__WEBSERVER__SHOW_TRIGGER_FORM_IF_NO_PARAMS": "True", "AIRFLOW__CORE__MAX_MAP_LENGTH": "500"}'
     MWAA__CORE__FERNET_KEY: ${FERNET_KEY}
     MWAA__WEBSERVER__SECRET: '{"secret_key": "fake-key-aYDdF6d+Fjznai5yBW63CUAi0IipJqDHlNSWIun6y8o="}'
     # Use this enviornment variable to enable encryption with KMS.
@@ -65,7 +65,8 @@ x-airflow-common: &airflow-common
     MWAA__HEALTH_MONITORING_ENABLE_REVAMPED_HEALTHCHECK: ${MWAA__HEALTH_MONITORING_ENABLE_REVAMPED_HEALTHCHECK}
 
   volumes:
-    - ./dags:/usr/local/airflow/dags
+    - mwaa-2103-dags-volume:/usr/local/airflow/dags
+    - ./logs:/usr/local/airflow/logs
     - ./plugins:/usr/local/airflow/plugins
     - ./requirements:/usr/local/airflow/requirements
     - ./startup:/usr/local/airflow/startup
@@ -157,3 +158,5 @@ services:
 volumes:
   postgres-db-volume:
     name: "mwaa-2103-db-volume"
+  mwaa-2103-dags-volume:
+    name: "mwaa-2103-dags-volume"

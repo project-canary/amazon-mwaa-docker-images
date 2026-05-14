@@ -7,6 +7,7 @@ import argparse
 import os
 import re
 import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -93,6 +94,24 @@ def sync_dir(src: Path, dst: Path, extra_excludes: set[str] = set()):
                 item.unlink()
 
 
+def docker_cp_dags(dags_dir: Path, container: str):
+    """Copy the staged dags directory into a running container via docker cp.
+
+    The container must have the dags named volume mounted at
+    /usr/local/airflow/dags. Silently skips if the container is not running.
+    """
+    src = f"{dags_dir.resolve().as_posix()}/."
+    dst = f"{container}:/usr/local/airflow/dags/"
+    result = subprocess.run(["docker", "cp", src, dst], capture_output=True, text=True)
+    if result.returncode != 0:
+        # Container not yet running on startup — not an error, volume was
+        # pre-populated by start-local.sh before the stack started.
+        msg = result.stderr.strip() or "container not running"
+        print(f"  [docker cp] skipped: {msg}", file=sys.stderr)
+    else:
+        print(f"  [docker cp] synced to {container}")
+
+
 REQUIREMENTS_SRC = "Terraform/images/codebuild_custom/requirements.txt"
 
 
@@ -154,6 +173,8 @@ def main():
                         help="Watch for changes and re-sync automatically")
     parser.add_argument("--interval", type=int, default=5,
                         help="Poll interval in seconds when using --watch (default: 5)")
+    parser.add_argument("--docker-container", default=None, metavar="CONTAINER",
+                        help="Copy synced dags into this container via docker cp (e.g. mwaa-2103-scheduler)")
     args = parser.parse_args()
 
     data_pipelines_dir = resolve_path(args.data_pipelines_dir)
@@ -171,6 +192,8 @@ def main():
     for line in run_sync(data_pipelines_dir, dags_dir):
         print(line)
     print("Done.")
+    if args.docker_container:
+        docker_cp_dags(dags_dir, args.docker_container)
 
     if not args.watch:
         return
@@ -189,6 +212,8 @@ def main():
             for line in run_sync(data_pipelines_dir, dags_dir, quiet=True):
                 print(line)
             print("Done.")
+            if args.docker_container:
+                docker_cp_dags(dags_dir, args.docker_container)
             snapshot = new_snapshot
 
 

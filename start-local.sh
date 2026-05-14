@@ -66,14 +66,28 @@ aws s3 sync "$PLUGINS_S3_DIR" "$PLUGINS_DIR/" --exclude '*' --include 'plugins_w
 echo "==> Extracting wheels..."
 unzip -o "$PLUGINS_DIR/plugins_whl.zip" -d "$PLUGINS_DIR/" > /dev/null
 
+# The DAGs volume name must match docker-compose.yaml
+DAGS_VOLUME="mwaa-$(echo "$AIRFLOW_VERSION" | tr -d '.')-dags-volume"
+SCHEDULER_CONTAINER="mwaa-$(echo "$AIRFLOW_VERSION" | tr -d '.')-scheduler"
+
 # Initial sync: DAGs + requirements.txt
 echo "==> Syncing from data-pipelines..."
 MSYS_NO_PATHCONV=1 python sync_dags.py "$DATA_PIPELINES_DIR" "$AIRFLOW_VERSION"
 
+# Pre-populate the named DAGs volume from the staged dags directory.
+# This one-time copy via the 9P bridge is acceptable — the scheduler will
+# subsequently read from the native ext4 volume, not the Windows filesystem.
+echo "==> Populating DAGs volume (${DAGS_VOLUME})..."
+MSYS_NO_PATHCONV=1 docker run --rm \
+    -v "${DAGS_VOLUME}:/dags" \
+    -v "$(pwd)/images/airflow/$AIRFLOW_VERSION/dags:/src:ro" \
+    alpine sh -c "cp -a /src/. /dags/"
+
 # Optionally keep syncing in the background while the stack runs
 if [ "$WATCH" == "true" ]; then
     echo "==> Starting sync-dags in background (watch mode)..."
-    MSYS_NO_PATHCONV=1 python sync_dags.py "$DATA_PIPELINES_DIR" "$AIRFLOW_VERSION" --watch &
+    MSYS_NO_PATHCONV=1 python sync_dags.py "$DATA_PIPELINES_DIR" "$AIRFLOW_VERSION" \
+        --watch --docker-container "$SCHEDULER_CONTAINER" &
     SYNC_PID=$!
     trap "echo '==> Stopping sync-dags...'; kill $SYNC_PID 2>/dev/null; exit" INT TERM EXIT
 fi
