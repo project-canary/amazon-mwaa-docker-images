@@ -18,13 +18,13 @@ generate_fernet_key() {
     # Install cryptography package quietly
     chmod +x temporary-pip-install generate_fernet_key.py
     ./temporary-pip-install cryptography >/dev/null 2>&1
-    
+
     # Generate the key and format as JSON
-    KEY=$(python3 generate_fernet_key.py)
-    
+    KEY=$(python generate_fernet_key.py)
+
     # Uninstall cryptography package quietly
-    python3 -m pip uninstall -y cryptography cryptography-vectors &>/dev/null 2>&1
-    
+    python -m pip uninstall -y cryptography cryptography-vectors &>/dev/null 2>&1
+
     echo "$KEY"
 }
 
@@ -51,16 +51,17 @@ ENV_NAME="" # Choose an environment name here.
 REGION="us-west-2" # Keeping the region us-west-2 as default.
 
 # AWS Credentials
-# For local running without a real AWS account, dummy values are sufficient —
-# ElasticMQ (local SQS) does not validate credentials, but boto3 requires
-# non-empty values to sign requests. Replace with real credentials if you
-# want CloudWatch logging or other real AWS service access.
-AWS_ACCESS_KEY_ID="local" # Put your credentials here, or leave as "local" for offline use.
-AWS_SECRET_ACCESS_KEY="local" # Put your credentials here, or leave as "local" for offline use.
-AWS_SESSION_TOKEN="" # Put your credentials here (leave empty for offline use).
-export AWS_ACCESS_KEY_ID
-export AWS_SECRET_ACCESS_KEY
-export AWS_SESSION_TOKEN
+# Credentials are sourced from ~/.aws (mounted into containers) using the
+# profile named by AWS_PROFILE.  This lets the host credential tool refresh
+# credentials without restarting the stack.
+#
+# Defaults to "default" so no setup is required. Override by setting AWS_PROFILE
+# in the environment before running if you use a named profile.
+#
+# Static session-token env vars (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
+# AWS_SESSION_TOKEN) are intentionally NOT exported here — they expire and
+# override the profile chain, which causes sts:AssumeRole failures inside tasks.
+export AWS_PROFILE="${AWS_PROFILE:-default}"
 
 # BOM Generation
 GENERATE_BILL_OF_MATERIALS="False"
@@ -71,31 +72,30 @@ MWAA_LOCAL_RUNNER="true"
 export MWAA_LOCAL_RUNNER
 
 # MWAA Configuration
-MWAA__CORE__REQUIREMENTS_PATH="/usr/local/airflow/requirements/requirements.txt"
-MWAA__CORE__STARTUP_SCRIPT_PATH="/usr/local/airflow/startup/startup.sh"
-MWAA__LOGGING__AIRFLOW_DAGPROCESSOR_LOGS_ENABLED="true"
-MWAA__LOGGING__AIRFLOW_DAGPROCESSOR_LOG_GROUP_ARN="arn:aws:logs:${REGION}:${ACCOUNT_ID}:log-group:${ENV_NAME}-DAGProcessing"
+# Logging is disabled for local dev — ARNs intentionally left empty so the MWAA
+# logging config skips CloudWatch handler installation entirely and Airflow falls
+# back to its default FileTaskHandler (writes to ./logs/, readable in the UI).
+MWAA__LOGGING__AIRFLOW_DAGPROCESSOR_LOGS_ENABLED="false"
+MWAA__LOGGING__AIRFLOW_DAGPROCESSOR_LOG_GROUP_ARN=""
 MWAA__LOGGING__AIRFLOW_DAGPROCESSOR_LOG_LEVEL="INFO"
-MWAA__LOGGING__AIRFLOW_SCHEDULER_LOGS_ENABLED="true"
-MWAA__LOGGING__AIRFLOW_SCHEDULER_LOG_GROUP_ARN="arn:aws:logs:${REGION}:${ACCOUNT_ID}:log-group:${ENV_NAME}-Scheduler"
+MWAA__LOGGING__AIRFLOW_SCHEDULER_LOGS_ENABLED="false"
+MWAA__LOGGING__AIRFLOW_SCHEDULER_LOG_GROUP_ARN=""
 MWAA__LOGGING__AIRFLOW_SCHEDULER_LOG_LEVEL="INFO"
-MWAA__LOGGING__AIRFLOW_TASK_LOGS_ENABLED="true"
-MWAA__LOGGING__AIRFLOW_TASK_LOG_GROUP_ARN="arn:aws:logs:${REGION}:${ACCOUNT_ID}:log-group:${ENV_NAME}-Task"
+MWAA__LOGGING__AIRFLOW_TASK_LOGS_ENABLED="false"
+MWAA__LOGGING__AIRFLOW_TASK_LOG_GROUP_ARN=""
 MWAA__LOGGING__AIRFLOW_TASK_LOG_LEVEL="INFO"
-MWAA__LOGGING__AIRFLOW_TRIGGERER_LOGS_ENABLED="true"
-MWAA__LOGGING__AIRFLOW_TRIGGERER_LOG_GROUP_ARN="arn:aws:logs:${REGION}:${ACCOUNT_ID}:log-group:${ENV_NAME}-Scheduler"
+MWAA__LOGGING__AIRFLOW_TRIGGERER_LOGS_ENABLED="false"
+MWAA__LOGGING__AIRFLOW_TRIGGERER_LOG_GROUP_ARN=""
 MWAA__LOGGING__AIRFLOW_TRIGGERER_LOG_LEVEL="INFO"
-MWAA__LOGGING__AIRFLOW_WEBSERVER_LOGS_ENABLED="true"
-MWAA__LOGGING__AIRFLOW_WEBSERVER_LOG_GROUP_ARN="arn:aws:logs:${REGION}:${ACCOUNT_ID}:log-group:${ENV_NAME}-WebServer"
+MWAA__LOGGING__AIRFLOW_WEBSERVER_LOGS_ENABLED="false"
+MWAA__LOGGING__AIRFLOW_WEBSERVER_LOG_GROUP_ARN=""
 MWAA__LOGGING__AIRFLOW_WEBSERVER_LOG_LEVEL="INFO"
-MWAA__LOGGING__AIRFLOW_WORKER_LOGS_ENABLED="true"
-MWAA__LOGGING__AIRFLOW_WORKER_LOG_GROUP_ARN="arn:aws:logs:${REGION}:${ACCOUNT_ID}:log-group:${ENV_NAME}-Worker"
+MWAA__LOGGING__AIRFLOW_WORKER_LOGS_ENABLED="false"
+MWAA__LOGGING__AIRFLOW_WORKER_LOG_GROUP_ARN=""
 MWAA__LOGGING__AIRFLOW_WORKER_LOG_LEVEL="INFO"
 MWAA__CORE__TASK_MONITORING_ENABLED="false"
 MWAA__CORE__TERMINATE_IF_IDLE="false"
 MWAA__CORE__MWAA_SIGNAL_HANDLING_ENABLED="false"
-export MWAA__CORE__REQUIREMENTS_PATH
-export MWAA__CORE__STARTUP_SCRIPT_PATH
 export MWAA__LOGGING__AIRFLOW_DAGPROCESSOR_LOGS_ENABLED
 export MWAA__LOGGING__AIRFLOW_DAGPROCESSOR_LOG_GROUP_ARN
 export MWAA__LOGGING__AIRFLOW_DAGPROCESSOR_LOG_LEVEL

@@ -10,4 +10,4 @@ USER airflow
 
 ENTRYPOINT ["python3", "-m", "mwaa.entrypoint"]
 
-CMD shell
+CMD ["shell"]

@@ -20,10 +20,10 @@ generate_fernet_key() {
     ./temporary-pip-install cryptography >/dev/null 2>&1
 
     # Generate the key and format as JSON
-    KEY=$(python3 generate_fernet_key.py)
+    KEY=$(python generate_fernet_key.py)
 
     # Uninstall cryptography package quietly
-    python3 -m pip uninstall -y cryptography cryptography-vectors &>/dev/null 2>&1
+    python -m pip uninstall -y cryptography cryptography-vectors &>/dev/null 2>&1
 
     echo "$KEY"
 }

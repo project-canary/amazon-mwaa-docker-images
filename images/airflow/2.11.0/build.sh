@@ -10,8 +10,12 @@ echo "GENERATE_BILL_OF_MATERIALS is set to $GENERATE_BILL_OF_MATERIALS"
 
 # Generate the Dockerfiles from the templates.
 # shellcheck source=/dev/null
-source "../../../.venv/bin/activate"
-python3 ../generate-dockerfiles.py
+if [[ -f "../../../.venv/Scripts/activate" ]]; then
+    source "../../../.venv/Scripts/activate"
+else
+    source "../../../.venv/bin/activate"
+fi
+python ../generate-dockerfiles.py
 deactivate
 
 # Only prepare BOM directories if we're generating BOMs
